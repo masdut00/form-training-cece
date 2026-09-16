@@ -3,23 +3,47 @@
  * GOOGLE APPS SCRIPT: FORMULIR TRAINING KARYAWAN -> SPREADSHEET
  * ==============================================================================
  * Petunjuk Penggunaan:
- * 1. Buka Google Sheets baru atau yang sudah ada di Google Drive Anda.
+ * 1. Buka Google Sheets Anda yang terhubung dengan form ini.
  * 2. Klik menu "Extensions" (Ekstensi) > "Apps Script".
- * 3. Hapus semua kode default di Apps Script, lalu salin dan tempel SELURUH isi file ini.
+ * 3. Salin dan timpa SELURUH kode di Apps Script dengan isi file ini.
  * 4. Klik tombol "Save" (ikon disket).
- * 5. Klik tombol biru "Deploy" di kanan atas > pilih "New deployment".
- * 6. Klik ikon roda gigi (Select type) > pilih "Web app".
- * 7. Konfigurasi deployment:
- *    - Description: Web App Training Form
- *    - Execute as: Me (email akun Anda)
- *    - Who has access: Anyone (PENTING: pilih 'Anyone' agar Vercel/web bisa kirim data)
- * 8. Klik "Deploy" dan izinkan otorisasi akun Google Anda.
- * 9. Salin "Web app URL" (format: https://script.google.com/macros/s/.../exec).
- * 10. Buka formulir Anda (di Vercel / lokal) > klik tombol "Pengaturan Sheet" di kanan atas > tempel URL tersebut.
+ * 5. Klik "Deploy" > "Manage deployments" > klik ikon Pensil (Edit) > Version: "New version" > Klik "Deploy".
  * ==============================================================================
  */
 
 const SHEET_NAME = "Training Submissions";
+
+const HEADERS = [
+  "Waktu Submit",
+  "ID Training",
+  "Status Dokumen",
+  "Leader Pengaju",
+  "Departemen / Divisi",
+  "Kategori Training",
+  "Target Level Kemahiran",
+  "Tanggal Pengajuan",
+  "Metode Training",
+  "Platform & Link Meeting",
+  "Jadwal Pelaksanaan",
+  "Lokasi / Venue",
+  "Trainer / Fasilitator",
+  "Jumlah Peserta Terdaftar",
+  "Total Durasi Belajar",
+  "Rincian Biaya (Fee/Konsumsi/Materi/Venue)",
+  "Estimasi Biaya",
+  "Budget Disetujui",
+  "Actual Spend",
+  "Tujuan & Purpose",
+  "Goals (Target)",
+  "Prasyarat & Output",
+  "Link Silabus / Materi",
+  "Evaluasi & KPI",
+  "Follow-up & PIC",
+  "Daftar Peserta (Ringkasan)",
+  "Modul & Sesi (Ringkasan)",
+  "Approval Workflow (Ringkasan)",
+  "Raw Data JSON"
+];
 
 function doPost(e) {
   try {
@@ -31,40 +55,9 @@ function doPost(e) {
       sheet = ss.insertSheet(SHEET_NAME);
     }
 
-    // Periksa dan buat header jika sheet masih kosong
+    // Buat header jika sheet masih baru/kosong
     if (sheet.getLastRow() === 0) {
-      const headers = [
-        "Waktu Submit",
-        "ID Training",
-        "Status",
-        "Leader Pengaju",
-        "Departemen / Divisi",
-        "Kategori Training",
-        "Tanggal Pengajuan",
-        "Metode Training",
-        "Jadwal Pelaksanaan",
-        "Lokasi / Venue",
-        "Trainer",
-        "Jumlah Peserta Terdaftar",
-        "Total Durasi Belajar",
-        "Estimasi Biaya",
-        "Budget Disetujui",
-        "Actual Spend",
-        "Tujuan & Purpose",
-        "Goals",
-        "Daftar Peserta (Ringkasan)",
-        "Modul & Aktivitas",
-        "Approval Status",
-        "Raw Data JSON"
-      ];
-      sheet.appendRow(headers);
-
-      // Berikan style sederhana pada header
-      const headerRange = sheet.getRange(1, 1, 1, headers.length);
-      headerRange.setFontWeight("bold");
-      headerRange.setBackground("#3F5A44");
-      headerRange.setFontColor("#FFFFFF");
-      sheet.setFrozenRows(1);
+      setupSheetHeaders(sheet);
     }
 
     // Ambil data payload JSON dari request
@@ -85,7 +78,7 @@ function doPost(e) {
     // Format ringkasan peserta
     const participantsSummary = participants
       .filter(p => p.nama)
-      .map((p, idx) => `${idx + 1}. ${p.nama} (${p.departemen || "-"}) - ${p.kehadiran || "-"}`)
+      .map((p, idx) => `${idx + 1}. ${p.nama} (${p.departemen || "-"}) [Presensi: ${p.kehadiran || "-"}]`)
       .join("\n");
 
     // Format ringkasan modul
@@ -100,6 +93,24 @@ function doPost(e) {
       .map((a, idx) => `${idx + 1}. ${a.role}: ${a.nama || "-"} (${a.tanggal || "-"})`)
       .join("\n");
 
+    // Format meeting info
+    let meetingInfo = "-";
+    if (meta["Platform online"] || meta["Link meeting online"]) {
+      meetingInfo = [meta["Platform online"], meta["Link meeting online"]].filter(Boolean).join(" - ");
+    }
+
+    // Format rincian biaya breakdown
+    const rincianBiaya = `Fee: ${meta["Fee trainer"] || "0"} | Konsumsi: ${meta["Konsumsi & catering"] || "0"} | Materi: ${meta["Materi & sertifikat"] || "0"} | Venue: ${meta["Venue & alat"] || "0"}`;
+
+    // Format prasyarat & output
+    const prasyaratOutput = `Prasyarat: ${meta["Prasyarat peserta"] || "-"} | Output: ${meta["Sertifikasi / output"] || "-"}`;
+
+    // Format evaluasi & KPI
+    const evaluasiKpi = `Metode: ${meta["Metode evaluasi"] || "-"} | KPI 1: ${meta["KPI 1"] || "-"} (${meta["Target KPI 1"] || "-"}) | KPI 2: ${meta["KPI 2"] || "-"} (${meta["Target KPI 2"] || "-"}`;
+
+    // Format follow-up
+    const followupInfo = `Interval: ${meta["Interval follow-up"] || "-"} | PIC: ${meta["PIC monitoring"] || "-"}`;
+
     const rowData = [
       data.submittedAt || new Date().toISOString(),
       meta["ID training"] || "-",
@@ -107,18 +118,25 @@ function doPost(e) {
       meta["Leader pengaju"] || "-",
       meta["Departemen / divisi"] || "-",
       meta["Kategori training"] || "-",
+      meta["Target level kemahiran"] || "-",
       meta["Tanggal pengajuan"] || "-",
       meta["Metode training"] || "-",
+      meetingInfo,
       meta["Tanggal & jam pelaksanaan"] || "-",
       meta["Lokasi / venue"] || "-",
       meta["Trainer"] || "-",
       participants.filter(p => p.nama).length,
       meta["Total durasi belajar"] || "-",
+      rincianBiaya,
       meta["Estimasi biaya"] || "-",
       meta["Budget disetujui"] || "-",
       meta["Actual spend"] || "-",
       meta["Training plan purpose"] || "-",
       meta["Training goals"] || "-",
+      prasyaratOutput,
+      meta["Link silabus materi"] || "-",
+      evaluasiKpi,
+      followupInfo,
       participantsSummary || "-",
       modulesSummary || "-",
       approvalsSummary || "-",
@@ -128,7 +146,7 @@ function doPost(e) {
     sheet.appendRow(rowData);
 
     return ContentService.createTextOutput(
-      JSON.stringify({ status: "success", message: "Data saved to Google Sheets successfully" })
+      JSON.stringify({ status: "success", message: "Data saved to Google Sheets successfully", id: meta["ID training"] })
     ).setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
@@ -138,8 +156,16 @@ function doPost(e) {
   }
 }
 
+function setupSheetHeaders(sheet) {
+  sheet.appendRow(HEADERS);
+  const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
+  headerRange.setFontWeight("bold");
+  headerRange.setBackground("#3F5A44");
+  headerRange.setFontColor("#FFFFFF");
+  sheet.setFrozenRows(1);
+}
+
 function doGet(e) {
-  // Handler untuk mengembalikan data jika ingin diuji via browser
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET_NAME);

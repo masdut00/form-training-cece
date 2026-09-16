@@ -1,20 +1,20 @@
 /**
- * Formulir Training Karyawan - Interactive Logic & Sheet Integration
+ * Formulir Training Karyawan - Interactive Logic, Stepper & Sheet Integration
  */
 
 // ==============================================================================
 // KONFIGURASI GOOGLE SPREADSHEET (HARDCODE)
-// Tempelkan URL Web App Google Apps Script Anda di dalam tanda petik di bawah:
 // ==============================================================================
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_3OrTUdwweTOHFYTR4KMdq06HQTjub54z_Cae4q6ZN26YlW0DLwpovd2ggE2G8Pxb/exec"; // contoh: "https://script.google.com/macros/s/AKfycb.../exec"
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_3OrTUdwweTOHFYTR4KMdq06HQTjub54z_Cae4q6ZN26YlW0DLwpovd2ggE2G8Pxb/exec";
 
 // Configuration Keys
-const SCRIPT_URL_KEY = 'training_app_script_url';
 const SUBMISSIONS_STORAGE_KEY = 'training_submissions_master';
 const ADMIN_PIN_KEY = 'training_admin_pin';
 const DEFAULT_ADMIN_PIN = 'ubahpin123';
 
-// Counters for Dynamic Tables
+// State Management
+let currentStep = 1;
+const totalSteps = 4;
 let participantCounter = 0;
 let moduleCounter = 0;
 let approvalCounter = 0;
@@ -39,15 +39,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 3. Seed initial dynamic rows
-  addParticipant();
-  addParticipant();
-  addModule('Pengenalan Materi & Dasar', '60 menit', '', 'Lecture', 'Overview konsep dasar dan sasaran');
-  addModule('Workshop & Studi Kasus', '120 menit', '', 'Praktik', 'Simulasi langsung penerapan pada pekerjaan');
-  addApproval('Line Manager');
+  addParticipant('Budi Santoso', 'Technology & IT');
+  addParticipant('Siti Rahma', 'Technology & IT');
+  addModule('Dasar Arsitektur & Best Practices', '60 menit', 'Fasilitator Internal', 'Lecture', 'Pengenalan konsep dan standar kerja');
+  addModule('Hands-on Workshop & Studi Kasus', '120 menit', 'Fasilitator Internal', 'Praktik', 'Simulasi langsung penerapan di modul proyek');
+  addApproval('Direct Supervisor / Line Manager');
   addApproval('HR / People & Culture');
 
-  // 4. Calculate initial schedule & duration
+  // 4. Initial calculations & stepper UI
   calculateScheduleAndDuration();
+  updateStepperUI();
 
   // Handle URL Hash on load
   handleHashNavigation();
@@ -62,6 +63,148 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// ==========================================
+// Stepper Navigation Logic
+// ==========================================
+function goToStep(step) {
+  if (step < 1 || step > totalSteps) return;
+
+  // If moving forward, validate current step required fields
+  if (step > currentStep) {
+    if (!validateStep(currentStep)) return;
+  }
+
+  currentStep = step;
+  updateStepperUI();
+
+  if (currentStep === 4) {
+    populateReviewSummary();
+  }
+
+  // Scroll to top of form
+  const formView = document.getElementById('formView');
+  if (formView) {
+    formView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function nextStep() {
+  goToStep(currentStep + 1);
+}
+
+function prevStep() {
+  goToStep(currentStep - 1);
+}
+
+function updateStepperUI() {
+  // 1. Panels visibility
+  for (let i = 1; i <= totalSteps; i++) {
+    const panel = document.getElementById(`stepPanel${i}`);
+    if (panel) {
+      if (i === currentStep) {
+        panel.classList.add('active');
+      } else {
+        panel.classList.remove('active');
+      }
+    }
+  }
+
+  // 2. Desktop Stepper Tabs
+  for (let i = 1; i <= totalSteps; i++) {
+    const tab = document.getElementById(`stepTab${i}`);
+    if (tab) {
+      tab.classList.remove('active', 'completed');
+      if (i === currentStep) {
+        tab.classList.add('active');
+      } else if (i < currentStep) {
+        tab.classList.add('completed');
+      }
+    }
+  }
+
+  // 3. Progress Bar Fill
+  const percent = Math.round((currentStep / totalSteps) * 100);
+  const fill = document.getElementById('stepperProgressFill');
+  if (fill) fill.style.width = `${percent}%`;
+
+  // 4. Mobile Text
+  const stepTitles = [
+    'Profil & Sasaran',
+    'Pelaksanaan & Peserta',
+    'Biaya & Evaluasi',
+    'Review & Approval'
+  ];
+  const mobileText = document.getElementById('mobileStepText');
+  if (mobileText) {
+    mobileText.textContent = `Langkah ${currentStep} dari 4: ${stepTitles[currentStep - 1]}`;
+  }
+  const mobilePercent = document.getElementById('mobileProgressPercent');
+  if (mobilePercent) mobilePercent.textContent = `${percent}%`;
+
+  // 5. Bottom Sticky Bar
+  const bottomInfo = document.getElementById('bottomStepIndicator');
+  if (bottomInfo) {
+    bottomInfo.textContent = `Langkah ${currentStep} dari 4: ${stepTitles[currentStep - 1]}`;
+  }
+
+  const prevBtn = document.getElementById('prevStepBtn');
+  if (prevBtn) prevBtn.disabled = currentStep === 1;
+
+  const nextBtn = document.getElementById('nextStepBtn');
+  const submitBtn = document.getElementById('submitBtn');
+
+  if (currentStep === totalSteps) {
+    if (nextBtn) nextBtn.style.display = 'none';
+    if (submitBtn) submitBtn.style.display = 'inline-flex';
+  } else {
+    if (nextBtn) nextBtn.style.display = 'inline-flex';
+    if (submitBtn) submitBtn.style.display = 'none';
+  }
+}
+
+function validateStep(step) {
+  if (step === 1) {
+    const idVal = (document.getElementById('trainingId')?.value || '').trim();
+    const leaderVal = (document.getElementById('leaderName')?.value || '').trim();
+    const deptVal = (document.getElementById('deptName')?.value || '').trim();
+
+    if (!idVal || !leaderVal || !deptVal) {
+      showToast('Lengkapi field wajib (ID Training, Leader, Departemen)', 'error');
+      if (!leaderVal) document.getElementById('leaderName')?.focus();
+      else if (!deptVal) document.getElementById('deptName')?.focus();
+      return false;
+    }
+  }
+  return true;
+}
+
+// ==========================================
+// Chip Selection (Level & Method)
+// ==========================================
+function selectChip(type, value, cardEl) {
+  if (type === 'level') {
+    document.querySelectorAll('#levelChipGrid .chip-card').forEach(c => c.classList.remove('selected'));
+    cardEl.classList.add('selected');
+    const input = document.getElementById('levelKemahiran');
+    if (input) input.value = value;
+  } else if (type === 'method') {
+    document.querySelectorAll('#methodChipGrid .chip-card').forEach(c => c.classList.remove('selected'));
+    cardEl.classList.add('selected');
+    const input = document.getElementById('metode');
+    if (input) input.value = value;
+
+    // Toggle Online platform details
+    const onlineRow = document.getElementById('onlineDetailsRow');
+    if (onlineRow) {
+      if (value === 'Online' || value === 'Hybrid') {
+        onlineRow.style.display = 'grid';
+      } else {
+        onlineRow.style.display = 'none';
+      }
+    }
+  }
+}
 
 // ==========================================
 // Automation Helpers
@@ -169,7 +312,7 @@ function calculateScheduleAndDuration() {
 // ==========================================
 // Dynamic Rows: Participants
 // ==========================================
-function addParticipant(name = '', dept = '', attendance = '') {
+function addParticipant(name = '', dept = '', attendance = 'present') {
   participantCounter++;
   const tbody = document.getElementById('participantBody');
   const deptSelect = document.getElementById('deptName');
@@ -181,10 +324,10 @@ function addParticipant(name = '', dept = '', attendance = '') {
 
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td style="color:var(--ink-faint);font-size:13px;width:40px;">${participantCounter}</td>
-    <td><input type="text" placeholder="Nama karyawan" value="${name}"></td>
+    <td style="color:var(--ink-faint);font-size:13px;width:36px;">${participantCounter}</td>
+    <td><input type="text" placeholder="Nama lengkap karyawan" value="${name}"></td>
     <td style="width:180px;"><input type="text" placeholder="Departemen / Divisi" value="${defaultDept}"></td>
-    <td style="width:160px;">
+    <td style="width:150px;">
       <div class="attend-toggle">
         <button type="button" class="${attendance === 'present' ? 'active-present' : ''}" onclick="setAttendance(this,'present')">Hadir</button>
         <button type="button" class="${attendance === 'absent' ? 'active-absent' : ''}" onclick="setAttendance(this,'absent')">Absen</button>
@@ -209,12 +352,57 @@ function updateParticipantCount() {
   const rows = document.getElementById('participantBody').querySelectorAll('tr').length;
   const countEl = document.getElementById('participantCount');
   if (countEl) {
-    countEl.textContent = `${rows} peserta`;
+    countEl.textContent = `${rows} peserta terdaftar`;
   }
   const plannedEl = document.getElementById('plannedParticipants');
   if (plannedEl) {
     plannedEl.value = rows;
   }
+}
+
+// Quick Import from Excel Textarea
+function importPesertaFromText() {
+  const textarea = document.getElementById('excelPasteArea');
+  if (!textarea || !textarea.value.trim()) {
+    showToast('Teks daftar peserta masih kosong.', 'error');
+    return;
+  }
+
+  const lines = textarea.value.split('\n');
+  let addedCount = 0;
+  const deptSelect = document.getElementById('deptName');
+  const fallbackDept = (deptSelect && deptSelect.value !== 'custom') ? deptSelect.value : '';
+
+  lines.forEach(line => {
+    const cleanLine = line.trim();
+    if (!cleanLine) return;
+
+    let name = cleanLine;
+    let dept = fallbackDept;
+
+    if (cleanLine.includes('\t')) {
+      const parts = cleanLine.split('\t');
+      name = parts[0].trim();
+      dept = parts[1] ? parts[1].trim() : fallbackDept;
+    } else if (cleanLine.includes(' - ')) {
+      const parts = cleanLine.split(' - ');
+      name = parts[0].trim();
+      dept = parts[1] ? parts[1].trim() : fallbackDept;
+    } else if (cleanLine.includes(';')) {
+      const parts = cleanLine.split(';');
+      name = parts[0].trim();
+      dept = parts[1] ? parts[1].trim() : fallbackDept;
+    }
+
+    if (name) {
+      addParticipant(name, dept);
+      addedCount++;
+    }
+  });
+
+  textarea.value = '';
+  closeModal('modalQuickPasteExcel');
+  showToast(`Berhasil menambahkan ${addedCount} peserta!`, 'success');
 }
 
 // ==========================================
@@ -227,7 +415,7 @@ function addModule(mod = '', dur = '90 menit', pic = '', method = '', desc = '')
   tr.innerHTML = `
     <td style="color:var(--ink-faint);font-size:13px;width:36px;">${moduleCounter}</td>
     <td><input type="text" placeholder="Nama modul / topik" value="${mod}"></td>
-    <td style="width:125px;">
+    <td style="width:130px;">
       <select onchange="calculateScheduleAndDuration()">
         <option value="30 menit" ${dur === '30 menit' ? 'selected' : ''}>30 menit</option>
         <option value="45 menit" ${dur === '45 menit' ? 'selected' : ''}>45 menit</option>
@@ -266,7 +454,7 @@ function addApproval(role = '', name = '', date = '') {
   div.innerHTML = `
     <div class="step-badge voice">${approvalCounter}</div>
     <div>
-      <span class="field-label">Role / Jabatan</span>
+      <span class="field-label">Role / Otoritas</span>
       <input type="text" placeholder="cth. Line Manager" value="${role}">
     </div>
     <div>
@@ -297,9 +485,6 @@ function renumberApprovals() {
   });
 }
 
-// ==========================================
-// General Row Removal & Renumbering
-// ==========================================
 function removeRow(btn) {
   const tr = btn.closest('tr');
   const tbody = tr.parentElement;
@@ -319,28 +504,12 @@ function renumber(tbody) {
   }
   if (tbody.id === 'moduleBody') {
     moduleCounter = rows.length;
+    calculateScheduleAndDuration();
   }
 }
 
 // ==========================================
-// Status Dropdown
-// ==========================================
-function toggleStatusMenu(e) {
-  e.stopPropagation();
-  document.getElementById('statusMenu').classList.toggle('open');
-}
-
-function setStatus(cls, label) {
-  const pill = document.getElementById('statusPill');
-  const text = document.getElementById('statusText');
-  pill.className = `status-pill ${cls}`;
-  text.textContent = label;
-  document.getElementById('statusMenu').classList.remove('open');
-  showToast(`Status dokumen diubah menjadi: ${label}`, 'info');
-}
-
-// ==========================================
-// Budget Calculation & Formatting
+// Budget Calculation & Breakdown
 // ==========================================
 function formatRupiah(input) {
   let digits = input.value.replace(/\D/g, '');
@@ -360,9 +529,23 @@ function rupiahToNumber(str) {
   return digits ? parseInt(digits, 10) : 0;
 }
 
+function calcBudgetBreakdown() {
+  const fee = rupiahToNumber(document.getElementById('budgetFee')?.value);
+  const konsumsi = rupiahToNumber(document.getElementById('budgetKonsumsi')?.value);
+  const materi = rupiahToNumber(document.getElementById('budgetMateri')?.value);
+  const venue = rupiahToNumber(document.getElementById('budgetVenue')?.value);
+
+  const total = fee + konsumsi + materi + venue;
+  const estInput = document.getElementById('estBudget');
+  if (estInput) {
+    estInput.value = total > 0 ? 'Rp ' + new Intl.NumberFormat('id-ID').format(total) : '';
+  }
+  calcVariance();
+}
+
 function calcVariance() {
-  const appr = rupiahToNumber(document.getElementById('apprBudget').value);
-  const act = rupiahToNumber(document.getElementById('actBudget').value);
+  const appr = rupiahToNumber(document.getElementById('apprBudget')?.value);
+  const act = rupiahToNumber(document.getElementById('actBudget')?.value);
   const el = document.getElementById('varianceText');
   if (!el) return;
 
@@ -380,6 +563,23 @@ function calcVariance() {
     el.textContent = `Melebihi budget Rp ${formatted}`;
     el.style.color = 'var(--danger)';
   }
+}
+
+// ==========================================
+// Status Dropdown
+// ==========================================
+function toggleStatusMenu(e) {
+  e.stopPropagation();
+  document.getElementById('statusMenu').classList.toggle('open');
+}
+
+function setStatus(cls, label) {
+  const pill = document.getElementById('statusPill');
+  const text = document.getElementById('statusText');
+  pill.className = `status-pill ${cls}`;
+  text.textContent = label;
+  document.getElementById('statusMenu').classList.remove('open');
+  showToast(`Status dokumen diubah menjadi: ${label}`, 'info');
 }
 
 // ==========================================
@@ -428,12 +628,14 @@ function switchView(view) {
   const masterView = document.getElementById('masterView');
   const tabForm = document.getElementById('tabForm');
   const tabMaster = document.getElementById('tabMaster');
+  const stickyBar = document.getElementById('stickyBottomBar');
 
   if (view === 'form') {
     formView.style.display = '';
     masterView.style.display = 'none';
     tabForm.classList.add('active');
     tabMaster.classList.remove('active');
+    if (stickyBar) stickyBar.style.display = '';
     if (window.location.hash === '#admin' || window.location.hash === '#master') {
       history.replaceState(null, null, ' ');
     }
@@ -442,9 +644,43 @@ function switchView(view) {
     masterView.style.display = '';
     tabForm.classList.remove('active');
     tabMaster.classList.add('active');
+    if (stickyBar) stickyBar.style.display = 'none';
     window.location.hash = '#master';
     loadMasterData();
   }
+}
+
+// ==========================================
+// Executive Review Summary Populator (Step 4)
+// ==========================================
+function populateReviewSummary() {
+  const data = collectFormData();
+  const m = data.meta;
+
+  const setRev = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val || '-';
+  };
+
+  setRev('revId', m['ID training']);
+  setRev('revLeader', m['Leader pengaju']);
+  setRev('revDept', m['Departemen / divisi']);
+  setRev('revCategory', `${m['Kategori training'] || '-'} (${m['Target level kemahiran'] || 'All Level'})`);
+  setRev('revSchedule', m['Tanggal & jam pelaksanaan']);
+
+  let venueDisplay = m['Lokasi / venue'] || '-';
+  if (m['Metode training'] === 'Online' || m['Metode training'] === 'Hybrid') {
+    const platform = m['Platform online'] || 'Online';
+    const link = m['Link meeting online'] ? ` (${m['Link meeting online']})` : '';
+    venueDisplay = `${venueDisplay} [${platform}${link}]`;
+  }
+  setRev('revVenue', venueDisplay);
+  setRev('revTrainer', m['Trainer']);
+
+  const countPeserta = (data.participants || []).filter(p => p.nama).length;
+  setRev('revDurationParticipants', `${m['Total durasi belajar'] || '-'} • ${countPeserta} Peserta`);
+  setRev('revBudget', m['Budget disetujui'] || m['Estimasi biaya'] || 'Rp 0');
+  setRev('revStatus', data.status);
 }
 
 // ==========================================
@@ -486,7 +722,7 @@ function collectFormData() {
     const selects = tr.querySelectorAll('select');
     modules.push({
       modul: inputs[0] ? inputs[0].value.trim() : '',
-      durasi: selects[0] ? selects[0].value : (inputs[1] ? inputs[1].value.trim() : ''),
+      durasi: selects[0] ? selects[0].value : '',
       pic: inputs[1] ? inputs[1].value.trim() : '',
       metode: selects[1] ? selects[1].value : '',
       deskripsi: inputs[2] ? inputs[2].value.trim() : ''
@@ -513,59 +749,31 @@ function collectFormData() {
   };
 }
 
-function validateForm(data) {
-  const idValue = (data.meta['ID training'] || '').trim();
-  const leader = (data.meta['Leader pengaju'] || '').trim();
-  let dept = (data.meta['Departemen / divisi'] || '').trim();
-
-  let isValid = true;
-  let firstErrorEl = null;
-
-  const checkField = (id, valid) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (!valid) {
-      el.classList.add('error');
-      if (!firstErrorEl) firstErrorEl = el;
-      isValid = false;
-    } else {
-      el.classList.remove('error');
-    }
-  };
-
-  checkField('trainingId', idValue.length > 0);
-  checkField('leaderName', leader.length > 0);
-  checkField('deptName', dept.length > 0);
-
-  if (!isValid) {
-    showToast('Harap lengkapi field wajib (ID Training, Leader, Departemen)', 'error');
-    if (firstErrorEl) {
-      firstErrorEl.focus();
-      firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    return false;
-  }
-  return true;
-}
-
 // ==========================================
 // Submission Workflow (Modal & Sync)
 // ==========================================
 function submitPlan() {
   const data = collectFormData();
-  if (!validateForm(data)) return;
+  const idValue = (data.meta['ID training'] || '').trim();
+  const leader = (data.meta['Leader pengaju'] || '').trim();
+  const dept = (data.meta['Departemen / divisi'] || '').trim();
+
+  if (!idValue || !leader || !dept) {
+    showToast('Lengkapi field wajib (ID Training, Leader, Departemen)', 'error');
+    goToStep(1);
+    return;
+  }
 
   pendingSubmitData = data;
 
-  // Populate Confirm Modal Summary
   const countPeserta = (data.participants || []).filter(p => p.nama).length;
   const summaryBox = document.getElementById('confirmSummaryBox');
   if (summaryBox) {
     summaryBox.innerHTML = `
       <div><strong>ID Training:</strong> ${data.meta['ID training']}</div>
-      <div><strong>Leader:</strong> ${data.meta['Leader pengaju']} (${data.meta['Departemen / divisi'] || '-'})</div>
-      <div><strong>Kategori:</strong> ${data.meta['Kategori training'] || '-'} / ${data.meta['Metode training'] || '-'}</div>
-      <div><strong>Jadwal:</strong> ${data.meta['Tanggal & jam pelaksanaan'] || '-'}</div>
+      <div><strong>Leader:</strong> ${data.meta['Leader pengaju']} (${data.meta['Departemen / divisi']})</div>
+      <div><strong>Kategori:</strong> ${data.meta['Kategori training']} / ${data.meta['Metode training']} [${data.meta['Target level kemahiran'] || 'General'}]</div>
+      <div><strong>Jadwal:</strong> ${data.meta['Tanggal & jam pelaksanaan']}</div>
       <div><strong>Jumlah Peserta:</strong> ${countPeserta} orang terdaftar</div>
       <div><strong>Budget Disetujui:</strong> ${data.meta['Budget disetujui'] || 'Rp 0'}</div>
     `;
@@ -582,10 +790,7 @@ async function confirmAndExecuteSubmit() {
   const btn = document.getElementById('submitBtn');
   const originalHtml = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = `<span class="spinner"></span> Mengirim data...`;
-
-  const statusEl = document.getElementById('submitStatus');
-  statusEl.textContent = 'Menyimpan data ke sistem...';
+  btn.innerHTML = `<span class="spinner"></span> Mengirim...`;
 
   const entry = {
     ...data,
@@ -593,28 +798,24 @@ async function confirmAndExecuteSubmit() {
     submittedAt: new Date().toISOString()
   };
 
-  // 1. Simpan ke Local / Master Data
+  // 1. Simpan ke Local Master Data
   saveToLocalStorage(entry);
 
   // 2. Kirim ke Google Apps Script (Spreadsheet)
-  const scriptUrl = GOOGLE_SCRIPT_URL.trim() || localStorage.getItem(SCRIPT_URL_KEY) || '';
+  const scriptUrl = GOOGLE_SCRIPT_URL.trim();
   let sheetSaved = false;
 
   if (scriptUrl) {
     try {
-      // Mengirim POST ke Google Apps Script
-      // mode: 'no-cors' agar tidak terblokir pembatasan CORS browser pada web app redirect Google
       await fetch(scriptUrl, {
         method: 'POST',
         mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(entry)
       });
       sheetSaved = true;
     } catch (err) {
-      console.warn('Gagal sync ke Google Sheet:', err);
+      console.warn('Sync ke Google Sheet tertunda/offline:', err);
       sheetSaved = false;
     }
   }
@@ -622,15 +823,13 @@ async function confirmAndExecuteSubmit() {
   btn.disabled = false;
   btn.innerHTML = originalHtml;
 
-  // Persiapkan Draft Email
+  // Siapkan Draft Email
   openMailDraft(data);
 
-  // Show Success Modal
+  // Tampilkan Success Modal
   populateSuccessModal(data, sheetSaved, scriptUrl);
   openModal('modalSuccessSubmit');
-
   showToast('Pengajuan training berhasil disimpan!', 'success');
-  statusEl.textContent = 'Data berhasil disimpan.';
 }
 
 function saveToLocalStorage(entry) {
@@ -641,7 +840,6 @@ function saveToLocalStorage(entry) {
   } catch (e) {
     list = [];
   }
-  // Masukkan data terbaru di awal
   list.unshift(entry);
   localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(list));
 }
@@ -655,14 +853,14 @@ function populateSuccessModal(data, sheetSaved, scriptUrl) {
   if (scriptUrl) {
     sheetStatusNote = sheetSaved
       ? `<div style="color:var(--moss);font-weight:600;margin-top:6px;">&#10003; Berhasil dikirim ke Google Spreadsheet</div>`
-      : `<div style="color:var(--danger);font-weight:600;margin-top:6px;">&#9888; Pengiriman ke Google Sheet sedang diproses/tertunda, data tersimpan aman di riwayat lokal.</div>`;
+      : `<div style="color:var(--danger);font-weight:600;margin-top:6px;">&#9888; Pengiriman ke Google Sheet sedang diproses, data aman di riwayat lokal.</div>`;
   } else {
-    sheetStatusNote = `<div style="color:var(--clay);margin-top:6px;"><small>Catatan: Masukkan URL Web App pada variabel <code>GOOGLE_SCRIPT_URL</code> di file <code>js/app.js</code> agar terkirim otomatis ke Google Sheet.</small></div>`;
+    sheetStatusNote = `<div style="color:var(--clay);margin-top:6px;"><small>Data tersimpan di riwayat lokal.</small></div>`;
   }
 
   box.innerHTML = `
     <div><strong>ID:</strong> ${m['ID training']}</div>
-    <div><strong>Diajukan oleh:</strong> ${m['Leader pengaju']} (${m['Departemen / divisi'] || '-'})</div>
+    <div><strong>Diajukan oleh:</strong> ${m['Leader pengaju']} (${m['Departemen / divisi']})</div>
     <div><strong>Status:</strong> ${data.status}</div>
     ${sheetStatusNote}
   `;
@@ -682,17 +880,19 @@ function buildMailBody(data) {
     'ID Training         : ' + (m['ID training'] || '-'),
     'Leader Pengaju      : ' + (m['Leader pengaju'] || '-'),
     'Departemen / Divisi : ' + (m['Departemen / divisi'] || '-'),
-    'Kategori Training   : ' + (m['Kategori training'] || '-'),
+    'Kategori / Level    : ' + (m['Kategori training'] || '-') + ' [' + (m['Target level kemahiran'] || 'General') + ']',
     'Metode Training     : ' + (m['Metode training'] || '-'),
     'Jadwal Pelaksanaan : ' + (m['Tanggal & jam pelaksanaan'] || '-'),
-    'Lokasi / Venue      : ' + (m['Lokasi / venue'] || '-'),
+    'Lokasi / Platform   : ' + (m['Lokasi / venue'] || '-'),
     'Trainer             : ' + (m['Trainer'] || '-'),
     'Peserta Terdaftar   : ' + participantCount + ' orang',
+    'Total Durasi        : ' + (m['Total durasi belajar'] || '-'),
     'Budget Disetujui    : ' + (m['Budget disetujui'] || '-'),
     'Status Dokumen      : ' + (data.status || '-'),
+    'Link Silabus        : ' + (m['Link silabus materi'] || '-'),
     '--------------------------------------------------',
     '',
-    'Detail lengkap (peserta, rincian modul, approval) tersimpan di master data spreadsheet internal.'
+    'Detail lengkap tersimpan di master data Google Spreadsheet internal.'
   ];
   return lines.join('\n');
 }
@@ -701,11 +901,6 @@ function openMailDraft(data) {
   const subject = `Training Internal Plan - ${data.meta['ID training'] || 'TRN'} - ${data.meta['Leader pengaju'] || '-'}`;
   const body = buildMailBody(data);
   const mailto = `mailto:training@cpssoft.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  const link = document.getElementById('emailLink');
-  if (link) {
-    link.href = mailto;
-    link.style.display = 'inline-flex';
-  }
   const modalMailLink = document.getElementById('modalSuccessEmailLink');
   if (modalMailLink) {
     modalMailLink.href = mailto;
@@ -750,7 +945,7 @@ function loadMasterData() {
       <td><strong>${m['ID training'] || '-'}</strong></td>
       <td>${m['Leader pengaju'] || '-'}</td>
       <td>${m['Departemen / divisi'] || '-'}</td>
-      <td>${m['Kategori training'] || '-'}</td>
+      <td>${m['Kategori training'] || '-'} [${m['Target level kemahiran'] || 'General'}]</td>
       <td><span class="mini-pill ${cls}"><span class="dot"></span>${entry.status || 'Pending approval'}</span></td>
       <td>${(entry.participants || []).filter(p => p.nama).length} peserta</td>
       <td>${date}</td>
@@ -779,31 +974,32 @@ function showDetail(entry, index) {
 
   panel.innerHTML = `
     <div class="detail-panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 class="voice" style="margin:0;">${m['ID training'] || 'Detail Submission'}</h3>
-        <button type="button" class="btn-danger" onclick="deleteSubmission(${index})">Hapus Catatan</button>
+        <button type="button" class="btn-secondary" style="color:var(--danger);border-color:#F5C6BE;" onclick="deleteSubmission(${index})">Hapus Catatan</button>
       </div>
-      <div class="detail-grid">
-        <div class="detail-item"><label>Leader Pengaju</label><div>${m['Leader pengaju'] || '-'}</div></div>
-        <div class="detail-item"><label>Departemen / Divisi</label><div>${m['Departemen / divisi'] || '-'}</div></div>
-        <div class="detail-item"><label>Kategori Training</label><div>${m['Kategori training'] || '-'}</div></div>
-        <div class="detail-item"><label>Metode Training</label><div>${m['Metode training'] || '-'}</div></div>
-        <div class="detail-item"><label>Jadwal Pelaksanaan</label><div>${m['Tanggal & jam pelaksanaan'] || '-'}</div></div>
-        <div class="detail-item"><label>Lokasi / Venue</label><div>${m['Lokasi / venue'] || '-'}</div></div>
-        <div class="detail-item"><label>Trainer</label><div>${m['Trainer'] || '-'}</div></div>
-        <div class="detail-item"><label>Budget Disetujui</label><div>${m['Budget disetujui'] || '-'}</div></div>
+      <div class="review-grid">
+        <div class="review-item"><label>Leader Pengaju</label><div>${m['Leader pengaju'] || '-'}</div></div>
+        <div class="review-item"><label>Departemen / Divisi</label><div>${m['Departemen / divisi'] || '-'}</div></div>
+        <div class="review-item"><label>Kategori & Level</label><div>${m['Kategori training'] || '-'} (${m['Target level kemahiran'] || 'General'})</div></div>
+        <div class="review-item"><label>Metode Training</label><div>${m['Metode training'] || '-'}</div></div>
+        <div class="review-item"><label>Jadwal Pelaksanaan</label><div>${m['Tanggal & jam pelaksanaan'] || '-'}</div></div>
+        <div class="review-item"><label>Lokasi / Venue</label><div>${m['Lokasi / venue'] || '-'}</div></div>
+        <div class="review-item"><label>Trainer</label><div>${m['Trainer'] || '-'}</div></div>
+        <div class="review-item"><label>Budget Disetujui</label><div>${m['Budget disetujui'] || '-'}</div></div>
       </div>
-      <div class="detail-sub">Tujuan & Goals</div>
-      <div class="detail-list">
+      <div style="font-weight:600;margin:14px 0 6px;">Tujuan & Goals:</div>
+      <div style="font-size:13px;line-height:1.6;margin-bottom:12px;">
         <div><strong>Purpose:</strong> ${m['Training plan purpose'] || '-'}</div>
         <div><strong>Goals:</strong> ${m['Training goals'] || '-'}</div>
+        <div><strong>Link Silabus:</strong> ${m['Link silabus materi'] ? `<a href="${m['Link silabus materi']}" target="_blank">${m['Link silabus materi']}</a>` : '-'}</div>
       </div>
-      <div class="detail-sub">Daftar Peserta</div>
-      <div class="detail-list">${participantsList}</div>
-      <div class="detail-sub">Modul Training</div>
-      <div class="detail-list">${modulesList}</div>
-      <div class="detail-sub">Approval Workflow</div>
-      <div class="detail-list">${approvalsList}</div>
+      <div style="font-weight:600;margin:14px 0 6px;">Daftar Peserta:</div>
+      <div style="font-size:13px;line-height:1.7;">${participantsList}</div>
+      <div style="font-weight:600;margin:14px 0 6px;">Modul Training:</div>
+      <div style="font-size:13px;line-height:1.7;">${modulesList}</div>
+      <div style="font-weight:600;margin:14px 0 6px;">Alur Approval:</div>
+      <div style="font-size:13px;line-height:1.7;">${approvalsList}</div>
     </div>
   `;
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -826,24 +1022,6 @@ function deleteSubmission(index) {
 }
 
 // ==========================================
-// Settings Modal (Google Apps Script URL)
-// ==========================================
-function openSettingsModal() {
-  const currentUrl = localStorage.getItem(SCRIPT_URL_KEY) || '';
-  const input = document.getElementById('scriptUrlInput');
-  if (input) input.value = currentUrl;
-  openModal('modalSettings');
-}
-
-function saveSettings() {
-  const input = document.getElementById('scriptUrlInput');
-  const url = (input ? input.value : '').trim();
-  localStorage.setItem(SCRIPT_URL_KEY, url);
-  closeModal('modalSettings');
-  showToast('Pengaturan URL Google Apps Script disimpan.', 'success');
-}
-
-// ==========================================
 // Modal Helpers
 // ==========================================
 function openModal(id) {
@@ -862,7 +1040,6 @@ function closeModal(id) {
   }
 }
 
-// Close modals when clicking backdrop
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-overlay')) {
     e.target.classList.remove('active');
@@ -870,7 +1047,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Close modals with Escape key
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
@@ -881,7 +1057,7 @@ document.addEventListener('keydown', (e) => {
 // ==========================================
 // Toast Notification System
 // ==========================================
-function showToast(message, type = 'info', duration = 3500) {
+function showToast(message, type = 'info', duration = 3200) {
   let container = document.getElementById('toastContainer');
   if (!container) {
     container = document.createElement('div');
@@ -893,11 +1069,14 @@ function showToast(message, type = 'info', duration = 3500) {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
 
-  let icon = '&#9432;';
-  if (type === 'success') icon = '&#10003;';
-  if (type === 'error') icon = '&#9888;';
+  let iconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+  if (type === 'success') {
+    iconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+  } else if (type === 'error') {
+    iconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+  }
 
-  toast.innerHTML = `<span style="font-size:16px;">${icon}</span><span>${message}</span>`;
+  toast.innerHTML = `<span style="display:flex;align-items:center;">${iconSvg}</span><span>${message}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -924,7 +1103,7 @@ function exportToCsv() {
     return;
   }
 
-  const headers = ['ID Training', 'Leader', 'Departemen', 'Kategori', 'Metode', 'Jadwal', 'Lokasi', 'Trainer', 'Jumlah Peserta', 'Budget Disetujui', 'Status', 'Tanggal Dikirim'];
+  const headers = ['ID Training', 'Leader', 'Departemen', 'Kategori', 'Level', 'Metode', 'Jadwal', 'Lokasi', 'Trainer', 'Jumlah Peserta', 'Budget Disetujui', 'Status', 'Tanggal Dikirim'];
   const rows = entries.map(entry => {
     const m = entry.meta || {};
     const countPeserta = (entry.participants || []).filter(p => p.nama).length;
@@ -933,6 +1112,7 @@ function exportToCsv() {
       `"${(m['Leader pengaju'] || '').replace(/"/g, '""')}"`,
       `"${(m['Departemen / divisi'] || '').replace(/"/g, '""')}"`,
       `"${(m['Kategori training'] || '').replace(/"/g, '""')}"`,
+      `"${(m['Target level kemahiran'] || 'General').replace(/"/g, '""')}"`,
       `"${(m['Metode training'] || '').replace(/"/g, '""')}"`,
       `"${(m['Tanggal & jam pelaksanaan'] || '').replace(/"/g, '""')}"`,
       `"${(m['Lokasi / venue'] || '').replace(/"/g, '""')}"`,
