@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulir Training Karyawan - Internal Plan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Top Application Navigation -->
+  <header class="app-nav">
+    <div class="view-tabs">
+      <button type="button" id="tabForm" class="active" onclick="switchView('form')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Formulir Pengajuan
+      </button>
+      <button type="button" id="tabMaster" onclick="requestAdminAccess()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        Master Data &amp; Riwayat
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= FORM VIEW ================= -->
+  <main id="formView">
+
+    <div class="doc-header">
+      <div>
+        <p class="kicker">Employee Development Program</p>
+        <h1 class="voice">Formulir training karyawan</h1>
+      </div>
+      <div class="status-wrap">
+        <button type="button" class="status-pill draft" id="statusPill" onclick="toggleStatusMenu(event)">
+          <span class="dot"></span><span id="statusText">Pending approval</span><span class="chev">&#9662;</span>
+        </button>
+        <div class="status-menu" id="statusMenu">
+          <button type="button" onclick="setStatus('draft','Pending approval')"><span class="swatch draft"></span>Pending approval</button>
+          <button type="button" onclick="setStatus('approved','Approved')"><span class="swatch approved"></span>Approved</button>
+          <button type="button" onclick="setStatus('rejected','Reject')"><span class="swatch rejected"></span>Reject</button>
+          <button type="button" onclick="setStatus('discussion','Need discussion')"><span class="swatch discussion"></span>Need discussion</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meta Information Grid -->
+    <div class="meta-grid">
+      <div class="meta-cell">
+        <label>ID Training <span style="color:var(--danger)">*</span></label>
+        <input type="text" placeholder="TRN-2026-001" id="trainingId" data-field="ID training" required>
+      </div>
+      <div class="meta-cell">
+        <label>Leader Pengaju <span style="color:var(--danger)">*</span></label>
+        <input type="text" placeholder="Nama leader" id="leaderName" data-field="Leader pengaju" required>
+      </div>
+      <div class="meta-cell">
+        <label>Departemen / Divisi <span style="color:var(--danger)">*</span></label>
+        <input type="text" placeholder="cth. People &amp; Culture" id="deptName" data-field="Departemen / divisi" required>
+      </div>
+      <div class="meta-cell">
+        <label>Kategori Training</label>
+        <select id="category" data-field="Kategori training">
+          <option value="">Pilih kategori</option>
+          <option>Soft skill</option>
+          <option>Hard skill</option>
+          <option>Leadership</option>
+          <option>Compliance &amp; Security</option>
+        </select>
+      </div>
+      <div class="meta-cell">
+        <label>Tanggal Pengajuan</label>
+        <input type="date" id="tglPengajuan" data-field="Tanggal pengajuan">
+      </div>
+      <div class="meta-cell">
+        <label>Metode Training</label>
+        <select id="metode" data-field="Metode training">
+          <option value="">Pilih metode</option>
+          <option>Onsite</option>
+          <option>Online</option>
+          <option>Hybrid</option>
+          <option>On-the-job</option>
+        </select>
+      </div>
+      <div class="meta-cell">
+        <label>Jadwal Pelaksanaan</label>
+        <input type="text" placeholder="cth. 12 Sep, 09.00–15.00" id="jadwal" data-field="Tanggal &amp; jam pelaksanaan">
+      </div>
+      <div class="meta-cell">
+        <label>Lokasi / Venue</label>
+        <input type="text" placeholder="cth. Ruang Training Lt. 5 / Zoom" id="lokasi" data-field="Lokasi / venue">
+      </div>
+    </div>
+
+    <!-- 01. TUJUAN TRAINING -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num voice">01</span>
+        <h2 class="voice">Tujuan training</h2>
+      </div>
+      <div class="field-row cols-2">
+        <div class="field">
+          <label>Training Plan Purpose</label>
+          <textarea placeholder="Mengapa training internal ini diadakan?" id="purpose" data-field="Training plan purpose"></textarea>
+        </div>
+        <div class="field">
+          <label>Training Goals</label>
+          <textarea placeholder="Apa hasil spesifik yang ingin dicapai dari training ini?" id="goals" data-field="Training goals"></textarea>
+        </div>
+      </div>
+      <div class="field-row cols-2">
+        <div class="field">
+          <label>Prasyarat Peserta <span class="hint">(opsional)</span></label>
+          <input type="text" placeholder="cth. Minimal staff level, sudah familiar tools X" id="prereq" data-field="Prasyarat peserta">
+        </div>
+        <div class="field">
+          <label>Sertifikasi / Output yang Didapat</label>
+          <input type="text" placeholder="cth. Sertifikat internal, badge kompetensi" id="certOutput" data-field="Sertifikasi / output">
+        </div>
+      </div>
+    </section>
+
+    <!-- 02. DETAIL TRAINING -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num voice">02</span>
+        <h2 class="voice">Detail training</h2>
+      </div>
+      <div class="field-row cols-3">
+        <div class="field">
+          <label>Trainer / Instruktur</label>
+          <input type="text" placeholder="Nama trainer / fasilitator" id="trainer" data-field="Trainer">
+        </div>
+        <div class="field">
+          <label>Estimasi Jumlah Partisipan</label>
+          <input type="number" min="0" placeholder="0" id="plannedParticipants" data-field="Jumlah partisipan (rencana)">
+        </div>
+        <div class="field">
+          <label>Total Durasi Belajar</label>
+          <input type="text" placeholder="cth. 6 jam / 2 sesi" id="totalDuration" data-field="Total durasi belajar">
+        </div>
+      </div>
+    </section>
+
+    <!-- 03. DAFTAR PESERTA -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num voice">03</span>
+        <h2 class="voice">Daftar peserta</h2>
+        <span class="section-sub" id="participantCount">0 peserta</span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dyn">
+          <thead>
+            <tr>
+              <th style="width:40px">No</th>
+              <th>Nama Karyawan</th>
+              <th style="width:180px">Departemen / Divisi</th>
+              <th style="width:160px">Kehadiran</th>
+              <th style="width:40px"></th>
+            </tr>
+          </thead>
+          <tbody id="participantBody"></tbody>
+        </table>
+        <button type="button" class="add-row-btn" onclick="addParticipant()">
+          <span class="plus">+</span> Tambah peserta
+        </button>
+      </div>
+    </section>
+
+    <!-- 04. MODUL & SESI TRAINING -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num voice">04</span>
+        <h2 class="voice">Modul &amp; sesi training</h2>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dyn">
+          <thead>
+            <tr>
+              <th style="width:36px">#</th>
+              <th>Nama Modul</th>
+              <th style="width:110px">Durasi</th>
+              <th style="width:150px">Fasilitator / PIC</th>
+              <th style="width:130px">Metode Delivery</th>
+              <th>Deskripsi Aktivitas</th>
+              <th style="width:40px"></th>
+            </tr>
+          </thead>
+          <tbody id="moduleBody"></tbody>
+        </table>
+        <button type="button" class="add-row-btn" onclick="addModule()">
+          <span class="plus">+</span> Tambah modul
+        </button>
+      </div>
+    </section>
+
+    <!-- 05. BUDGET -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num voice">05</span>
+        <h2 class="voice">Budget</h2>
+      </div>
+      <div class="budget-grid">
+        <div class="budget-card">
+          <label>Estimasi Biaya</label>
+          <input type="text" inputmode="numeric" placeholder="Rp 0" id="estBudget" data-field="Estimasi biaya" oninput="formatRupiah(this)">
+          <p class="budget-variance">Trainer fee, konsumsi, materi, venue</p>
+        </div>
+        <div class="budget-card">
+          <label>Budget Disetujui</label>
+          <input type="text" inputmode="numeric" placeholder="Rp 0" id="apprBudget" data-field="Budget disetujui" oninput="formatRupiah(this)">
+        </div>
+        <div class="budget-card">
+          <label>Actual Spend</label>
+          <input type="text" inputmode="numeric" placeholder="Rp 0" id="actBudget" data-field="Actual spend" oninput="formatRupiah(this)">
+          <p class="budget-variance" id="varianceText">Selisih akan muncul di sini</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06. LEARNING OUTCOMES & EVALUASI -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num voice">06</span>
+        <h2 class="voice">Learning outcomes &amp; evaluasi</h2>
+      </div>
+      <div class="field-row cols-2">
+        <div class="field">
+          <label>Expected Outcomes</label>
+          <textarea placeholder="Hasil pemahaman yang diharapkan setelah training selesai" id="expectedOutcomes" data-field="Expected outcomes"></textarea>
+        </div>
+        <div class="field">
+          <label>Aplikasi / Implementasi Kerja</label>
+          <textarea placeholder="Bagaimana hasil training diterapkan langsung pada operasional pekerjaan" id="applicationImpl" data-field="Aplikasi / implementasi"></textarea>
+        </div>
+      </div>
+      <div class="eval-grid">
+        <div class="eval-card">
+          <h3 class="voice">Metode evaluasi</h3>
+          <div class="field" style="margin-bottom:12px;">
+            <select id="evalMethod" data-field="Metode evaluasi">
+              <option value="">Pilih metode evaluasi</option>
+              <option>Post-test</option>
+              <option>Feedback form</option>
+              <option>Observasi langsung</option>
+              <option>Kombinasi</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Success Metric / KPI Target</label>
+            <div class="kpi-row">
+              <input type="text" placeholder="cth. Skor post-test rata-rata" id="kpi1Name" data-field="KPI 1">
+              <input type="text" placeholder="Target, cth. ≥ 80" id="kpi1Target" data-field="Target KPI 1">
+            </div>
+            <div class="kpi-row">
+              <input type="text" placeholder="cth. Tingkat penerapan di tugas harian" id="kpi2Name" data-field="KPI 2">
+              <input type="text" placeholder="Target, cth. 30 hari" id="kpi2Target" data-field="Target KPI 2">
+            </div>
+          </div>
+        </div>
+        <div class="eval-card">
+          <h3 class="voice">Follow-up plan</h3>
+          <div class="field-row cols-2" style="margin-bottom:0;">
+            <div class="field">
+              <label>Cek Berkala Pasca Training</label>
+              <select id="followupInterval" data-field="Interval follow-up">
+                <option value="">Pilih interval</option>
+                <option>30 hari</option>
+                <option>60 hari</option>
+                <option>90 hari</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>PIC Monitoring</label>
+              <input type="text" placeholder="Nama PIC penanggung jawab" id="followupPIC" data-field="PIC monitoring">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07. APPROVAL WORKFLOW -->
+    <section class="section">
+      <div class="section-head">
+        <span class="section-num voice">07</span>
+        <h2 class="voice">Approval workflow</h2>
+      </div>
+      <div class="tbl-wrap" style="padding:8px 16px;">
+        <div class="approval-steps" id="approvalSteps"></div>
+      </div>
+      <button type="button" class="add-row-btn" style="border:1px solid var(--line);border-radius:var(--radius);margin-top:12px;" onclick="addApproval()">
+        <span class="plus">+</span> Tambah level approval
+      </button>
+      <p class="helper-note">Status di bagian atas halaman diatur manual lewat pill "Pending approval" &mdash; klik untuk mengganti jadi Approved, Reject, atau Need discussion.</p>
+    </section>
+
+    <!-- Submit Bar -->
+    <div class="submit-bar">
+      <button type="button" class="btn-primary" id="submitBtn" onclick="submitPlan()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        Submit Pengajuan
+      </button>
+      <a class="btn-secondary" id="emailLink" href="#" style="display:none;" target="_blank">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+        Buka Draft Email ke TnD
+      </a>
+      <span class="submit-status" id="submitStatus">Lengkapi formulir lalu klik Submit.</span>
+    </div>
+
+  </main>
+
+  <!-- ================= MASTER DATA VIEW ================= -->
+  <main id="masterView" style="display:none;">
+    <div class="master-toolbar">
+      <div>
+        <h2 class="voice">Master Data Submission</h2>
+        <span class="helper-note" style="margin:0;">Riwayat pengajuan training internal yang tersimpan.</span>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn-secondary" onclick="exportToCsv()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Export CSV
+        </button>
+        <button type="button" class="btn-secondary" onclick="loadMasterData()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="master-tbl-wrap">
+      <table class="master">
+        <thead>
+          <tr>
+            <th>ID Training</th>
+            <th>Leader Pengaju</th>
+            <th>Departemen</th>
+            <th>Kategori</th>
+            <th>Status</th>
+            <th>Peserta</th>
+            <th>Waktu Submit</th>
+          </tr>
+        </thead>
+        <tbody id="masterBody"></tbody>
+      </table>
+    </div>
+
+    <div id="masterEmpty" class="helper-note" style="display:none;padding:24px;text-align:center;background:var(--panel);border-radius:var(--radius);border:1px dashed var(--line);">
+      Belum ada submission masuk. Data akan tercatat otomatis di sini setelah formulir disubmit.
+    </div>
+
+    <div id="detailPanel"></div>
+  </main>
+
+</div>
+
+<!-- ================= MODALS & POPUPS ================= -->
+
+<!-- 1. Modal Konfirmasi Submit -->
+<div class="modal-overlay" id="modalConfirmSubmit">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="voice">Konfirmasi Pengajuan</h3>
+      <button type="button" class="modal-close" onclick="closeModal('modalConfirmSubmit')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Apakah rincian formulir training di bawah ini sudah benar dan siap diajukan?</p>
+      <div class="summary-box" id="confirmSummaryBox"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeModal('modalConfirmSubmit')">Periksa Kembali</button>
+      <button type="button" class="btn-primary" onclick="confirmAndExecuteSubmit()">Ya, Kirim Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Modal Sukses Submit -->
+<div class="modal-overlay" id="modalSuccessSubmit">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="voice">Pengajuan Berhasil Dikirim!</h3>
+      <button type="button" class="modal-close" onclick="closeModal('modalSuccessSubmit')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-icon-badge success">&#10003;</div>
+      <p>Data training telah tersimpan dan siap diproses oleh tim terkait.</p>
+      <div class="summary-box" id="successSummaryBox"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeModal('modalSuccessSubmit'); switchView('master');">Lihat di Master Data</button>
+      <a class="btn-primary" id="modalSuccessEmailLink" href="#" target="_blank" onclick="closeModal('modalSuccessSubmit')">
+        Kirim Notifikasi Email
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Modal Admin PIN -->
+<div class="modal-overlay" id="modalAdminPin">
+  <div class="modal-card" style="max-width:400px;">
+    <div class="modal-header">
+      <h3 class="voice">Akses Master Data</h3>
+      <button type="button" class="modal-close" onclick="closeModal('modalAdminPin')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-icon-badge info">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+      <p>Masukkan PIN admin untuk melihat riwayat dan master data submission:</p>
+      <form onsubmit="event.preventDefault(); checkAdminPin();" style="margin-top:14px;">
+        <input type="password" id="adminPinInput" class="field" placeholder="PIN Admin (default: ubahpin123)" style="padding:10px 12px;border:1px solid var(--line);border-radius:8px;width:100%;font-size:14px;" autocomplete="current-password">
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeModal('modalAdminPin')">Batal</button>
+      <button type="button" class="btn-primary" onclick="checkAdminPin()">Buka Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- Container Toast -->
+<div class="toast-container" id="toastContainer"></div>
+
+</body>
+</html>
