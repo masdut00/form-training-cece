@@ -326,6 +326,47 @@ body {
   outline: none;
 }
 
+.btn-text-action {
+  background: none;
+  border: none;
+  color: var(--moss);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 1px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.btn-text-action:hover {
+  background: var(--moss-tint);
+  color: var(--moss-dark);
+}
+
+.time-range-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.time-range-group input[type="time"] {
+  width: auto;
+  flex: 1;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12.5px;
+  background: var(--panel);
+}
+
+.time-range-group input[type="time"]:focus {
+  border-color: var(--moss);
+}
+
 /* Sections */
 .section {
   margin-bottom: 44px;

@@ -24,19 +24,30 @@ let pendingSubmitData = null;
 // Initialization
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  // Seed initial rows
+  // 1. Auto-generate ID Training if empty
+  generateNewTrainingId();
+
+  // 2. Set default today's date for Tanggal Pengajuan & Pelaksanaan
+  const today = new Date().toISOString().split('T')[0];
+  const tglPengajuan = document.getElementById('tglPengajuan');
+  if (tglPengajuan && !tglPengajuan.value) {
+    tglPengajuan.value = today;
+  }
+  const tglPelaksanaan = document.getElementById('tglPelaksanaan');
+  if (tglPelaksanaan && !tglPelaksanaan.value) {
+    tglPelaksanaan.value = today;
+  }
+
+  // 3. Seed initial dynamic rows
   addParticipant();
   addParticipant();
-  addModule();
+  addModule('Pengenalan Materi & Dasar', '60 menit', '', 'Lecture', 'Overview konsep dasar dan sasaran');
+  addModule('Workshop & Studi Kasus', '120 menit', '', 'Praktik', 'Simulasi langsung penerapan pada pekerjaan');
   addApproval('Line Manager');
   addApproval('HR / People & Culture');
 
-  // Set default today's date if empty
-  const tglPengajuan = document.getElementById('tglPengajuan');
-  if (tglPengajuan && !tglPengajuan.value) {
-    const today = new Date().toISOString().split('T')[0];
-    tglPengajuan.value = today;
-  }
+  // 4. Calculate initial schedule & duration
+  calculateScheduleAndDuration();
 
   // Handle URL Hash on load
   handleHashNavigation();
@@ -50,12 +61,110 @@ document.addEventListener('DOMContentLoaded', () => {
       menu.classList.remove('open');
     }
   });
-
-  // Init Settings field
-  const currentUrl = localStorage.getItem(SCRIPT_URL_KEY) || '';
-  const settingInput = document.getElementById('scriptUrlInput');
-  if (settingInput) settingInput.value = currentUrl;
 });
+
+// ==========================================
+// Automation Helpers
+// ==========================================
+function generateNewTrainingId() {
+  const d = new Date();
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const da = String(d.getDate()).padStart(2, '0');
+  const rand = Math.floor(100 + Math.random() * 900);
+  const newId = `TRN-${yr}${mo}${da}-${rand}`;
+  const input = document.getElementById('trainingId');
+  if (input) {
+    input.value = newId;
+    input.classList.remove('error');
+  }
+  return newId;
+}
+
+function handleDeptChange(selectEl) {
+  const customInput = document.getElementById('customDeptInput');
+  if (selectEl.value === 'custom') {
+    if (customInput) {
+      customInput.style.display = 'block';
+      customInput.focus();
+    }
+  } else {
+    if (customInput) {
+      customInput.style.display = 'none';
+      customInput.value = '';
+    }
+  }
+}
+
+function calculateScheduleAndDuration() {
+  const tglInput = document.getElementById('tglPelaksanaan');
+  const jamMulaiInput = document.getElementById('jamMulai');
+  const jamSelesaiInput = document.getElementById('jamSelesai');
+  const jadwalHidden = document.getElementById('jadwal');
+  const totalDuration = document.getElementById('totalDuration');
+
+  if (!tglInput || !jamMulaiInput || !jamSelesaiInput) return;
+
+  const tglVal = tglInput.value;
+  const mulaiVal = jamMulaiInput.value || '09:00';
+  const selesaiVal = jamSelesaiInput.value || '15:00';
+
+  let formattedDate = '';
+  if (tglVal) {
+    const parts = tglVal.split('-');
+    if (parts.length === 3) {
+      const dateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+  }
+
+  const scheduleText = formattedDate
+    ? `${formattedDate}, ${mulaiVal} – ${selesaiVal} WIB`
+    : `${mulaiVal} – ${selesaiVal} WIB`;
+
+  if (jadwalHidden) jadwalHidden.value = scheduleText;
+
+  // Calculate Duration
+  const [h1, m1] = mulaiVal.split(':').map(Number);
+  const [h2, m2] = selesaiVal.split(':').map(Number);
+  let diffMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
+
+  if (diffMinutes > 0) {
+    const hours = Math.floor(diffMinutes / 60);
+    const mins = diffMinutes % 60;
+    let durStr = '';
+    if (hours > 0 && mins > 0) {
+      durStr = `${hours} jam ${mins} menit`;
+    } else if (hours > 0) {
+      durStr = `${hours} jam`;
+    } else {
+      durStr = `${mins} menit`;
+    }
+    if (totalDuration) totalDuration.value = durStr;
+  } else if (totalDuration) {
+    let moduleTotalMinutes = 0;
+    document.querySelectorAll('#moduleBody tr').forEach(tr => {
+      const sel = tr.querySelector('select');
+      if (sel) {
+        const val = sel.value;
+        if (val.includes('30')) moduleTotalMinutes += 30;
+        else if (val.includes('45')) moduleTotalMinutes += 45;
+        else if (val.includes('60')) moduleTotalMinutes += 60;
+        else if (val.includes('90')) moduleTotalMinutes += 90;
+        else if (val.includes('120')) moduleTotalMinutes += 120;
+        else if (val.includes('180')) moduleTotalMinutes += 180;
+        else if (val.includes('Full day')) moduleTotalMinutes += 360;
+      }
+    });
+    if (moduleTotalMinutes > 0) {
+      const h = Math.floor(moduleTotalMinutes / 60);
+      const m = moduleTotalMinutes % 60;
+      totalDuration.value = h > 0 ? `${h} jam ${m > 0 ? m + ' menit' : ''}`.trim() : `${m} menit`;
+    } else {
+      totalDuration.value = '6 jam';
+    }
+  }
+}
 
 // ==========================================
 // Dynamic Rows: Participants
@@ -63,11 +172,18 @@ document.addEventListener('DOMContentLoaded', () => {
 function addParticipant(name = '', dept = '', attendance = '') {
   participantCounter++;
   const tbody = document.getElementById('participantBody');
+  const deptSelect = document.getElementById('deptName');
+  let currentDept = '';
+  if (deptSelect && deptSelect.value && deptSelect.value !== 'custom') {
+    currentDept = deptSelect.value;
+  }
+  const defaultDept = dept || currentDept;
+
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td style="color:var(--ink-faint);font-size:13px;width:40px;">${participantCounter}</td>
     <td><input type="text" placeholder="Nama karyawan" value="${name}"></td>
-    <td style="width:180px;"><input type="text" placeholder="Departemen / Divisi" value="${dept}"></td>
+    <td style="width:180px;"><input type="text" placeholder="Departemen / Divisi" value="${defaultDept}"></td>
     <td style="width:160px;">
       <div class="attend-toggle">
         <button type="button" class="${attendance === 'present' ? 'active-present' : ''}" onclick="setAttendance(this,'present')">Hadir</button>
@@ -95,19 +211,33 @@ function updateParticipantCount() {
   if (countEl) {
     countEl.textContent = `${rows} peserta`;
   }
+  const plannedEl = document.getElementById('plannedParticipants');
+  if (plannedEl) {
+    plannedEl.value = rows;
+  }
 }
 
 // ==========================================
 // Dynamic Rows: Modules
 // ==========================================
-function addModule(mod = '', dur = '', pic = '', method = '', desc = '') {
+function addModule(mod = '', dur = '90 menit', pic = '', method = '', desc = '') {
   moduleCounter++;
   const tbody = document.getElementById('moduleBody');
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td style="color:var(--ink-faint);font-size:13px;width:36px;">${moduleCounter}</td>
     <td><input type="text" placeholder="Nama modul / topik" value="${mod}"></td>
-    <td style="width:110px;"><input type="text" placeholder="cth. 90 menit" value="${dur}"></td>
+    <td style="width:125px;">
+      <select onchange="calculateScheduleAndDuration()">
+        <option value="30 menit" ${dur === '30 menit' ? 'selected' : ''}>30 menit</option>
+        <option value="45 menit" ${dur === '45 menit' ? 'selected' : ''}>45 menit</option>
+        <option value="60 menit" ${dur === '60 menit' ? 'selected' : ''}>60 menit (1 jam)</option>
+        <option value="90 menit" ${dur === '90 menit' || !dur ? 'selected' : ''}>90 menit (1.5 jam)</option>
+        <option value="120 menit" ${dur === '120 menit' ? 'selected' : ''}>120 menit (2 jam)</option>
+        <option value="180 menit" ${dur === '180 menit' ? 'selected' : ''}>180 menit (3 jam)</option>
+        <option value="Full day" ${dur === 'Full day' ? 'selected' : ''}>Full day (6 jam)</option>
+      </select>
+    </td>
     <td style="width:150px;"><input type="text" placeholder="Fasilitator / PIC" value="${pic}"></td>
     <td style="width:130px;">
       <select>
@@ -122,6 +252,7 @@ function addModule(mod = '', dur = '', pic = '', method = '', desc = '') {
     <td style="width:40px;"><button type="button" class="row-remove" onclick="removeRow(this)" title="Hapus baris">&times;</button></td>
   `;
   tbody.appendChild(tr);
+  calculateScheduleAndDuration();
 }
 
 // ==========================================
@@ -320,10 +451,23 @@ function switchView(view) {
 // Form Data Collection & Validation
 // ==========================================
 function collectFormData() {
+  calculateScheduleAndDuration();
+
   const meta = {};
   document.querySelectorAll('#formView [data-field]').forEach(el => {
     meta[el.dataset.field] = el.value || '';
   });
+
+  // Handle custom department if selected
+  if (meta['Departemen / divisi'] === 'custom') {
+    const custom = document.getElementById('customDeptInput');
+    meta['Departemen / divisi'] = custom && custom.value.trim() ? custom.value.trim() : 'Lainnya';
+  }
+
+  // Ensure schedule, duration, and participant counts are fresh
+  meta['Tanggal & jam pelaksanaan'] = document.getElementById('jadwal')?.value || meta['Tanggal & jam pelaksanaan'] || '';
+  meta['Total durasi belajar'] = document.getElementById('totalDuration')?.value || meta['Total durasi belajar'] || '';
+  meta['Jumlah partisipan (rencana)'] = document.getElementById('plannedParticipants')?.value || meta['Jumlah partisipan (rencana)'] || '';
 
   const participants = [];
   document.querySelectorAll('#participantBody tr').forEach(tr => {
@@ -339,13 +483,13 @@ function collectFormData() {
   const modules = [];
   document.querySelectorAll('#moduleBody tr').forEach(tr => {
     const inputs = tr.querySelectorAll('input');
-    const select = tr.querySelector('select');
+    const selects = tr.querySelectorAll('select');
     modules.push({
       modul: inputs[0] ? inputs[0].value.trim() : '',
-      durasi: inputs[1] ? inputs[1].value.trim() : '',
-      pic: inputs[2] ? inputs[2].value.trim() : '',
-      metode: select ? select.value : '',
-      deskripsi: inputs[3] ? inputs[3].value.trim() : ''
+      durasi: selects[0] ? selects[0].value : (inputs[1] ? inputs[1].value.trim() : ''),
+      pic: inputs[1] ? inputs[1].value.trim() : '',
+      metode: selects[1] ? selects[1].value : '',
+      deskripsi: inputs[2] ? inputs[2].value.trim() : ''
     });
   });
 
@@ -372,7 +516,7 @@ function collectFormData() {
 function validateForm(data) {
   const idValue = (data.meta['ID training'] || '').trim();
   const leader = (data.meta['Leader pengaju'] || '').trim();
-  const dept = (data.meta['Departemen / divisi'] || '').trim();
+  let dept = (data.meta['Departemen / divisi'] || '').trim();
 
   let isValid = true;
   let firstErrorEl = null;

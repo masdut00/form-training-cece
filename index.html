@@ -52,8 +52,11 @@
     <!-- Meta Information Grid -->
     <div class="meta-grid">
       <div class="meta-cell">
-        <label>ID Training <span style="color:var(--danger)">*</span></label>
-        <input type="text" placeholder="TRN-2026-001" id="trainingId" data-field="ID training" required>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <label style="margin-bottom:0;">ID Training <span style="color:var(--danger)">*</span></label>
+          <button type="button" class="btn-text-action" onclick="generateNewTrainingId()" title="Buat ID baru">&#8635; Baru</button>
+        </div>
+        <input type="text" placeholder="TRN-2026-001" id="trainingId" data-field="ID training" readonly style="font-weight:600;color:var(--moss);letter-spacing:0.02em;" required>
       </div>
       <div class="meta-cell">
         <label>Leader Pengaju <span style="color:var(--danger)">*</span></label>
@@ -61,7 +64,20 @@
       </div>
       <div class="meta-cell">
         <label>Departemen / Divisi <span style="color:var(--danger)">*</span></label>
-        <input type="text" placeholder="cth. People &amp; Culture" id="deptName" data-field="Departemen / divisi" required>
+        <select id="deptName" data-field="Departemen / divisi" onchange="handleDeptChange(this)" required>
+          <option value="">Pilih departemen</option>
+          <option value="People & Culture (HR)">People &amp; Culture (HR)</option>
+          <option value="Technology & IT">Technology &amp; IT</option>
+          <option value="Finance & Accounting">Finance &amp; Accounting</option>
+          <option value="Sales & Business Development">Sales &amp; Business Development</option>
+          <option value="Marketing & Communications">Marketing &amp; Communications</option>
+          <option value="Operations & Supply Chain">Operations &amp; Supply Chain</option>
+          <option value="Product & Design">Product &amp; Design</option>
+          <option value="Customer Support">Customer Support</option>
+          <option value="Legal & General Affair">Legal &amp; General Affair</option>
+          <option value="custom">Lainnya (Ketik manual)...</option>
+        </select>
+        <input type="text" id="customDeptInput" placeholder="Ketik nama divisi..." style="display:none;margin-top:6px;border-bottom:1px solid var(--line);font-size:13px;padding:4px 0;">
       </div>
       <div class="meta-cell">
         <label>Kategori Training</label>
@@ -89,7 +105,13 @@
       </div>
       <div class="meta-cell">
         <label>Jadwal Pelaksanaan</label>
-        <input type="text" placeholder="cth. 12 Sep, 09.00–15.00" id="jadwal" data-field="Tanggal &amp; jam pelaksanaan">
+        <input type="date" id="tglPelaksanaan" onchange="calculateScheduleAndDuration()" style="margin-bottom:4px;">
+        <div class="time-range-group">
+          <input type="time" id="jamMulai" value="09:00" onchange="calculateScheduleAndDuration()" title="Jam Mulai">
+          <span style="font-size:11px;color:var(--ink-faint);">-</span>
+          <input type="time" id="jamSelesai" value="15:00" onchange="calculateScheduleAndDuration()" title="Jam Selesai">
+        </div>
+        <input type="hidden" id="jadwal" data-field="Tanggal &amp; jam pelaksanaan">
       </div>
       <div class="meta-cell">
         <label>Lokasi / Venue</label>
@@ -137,12 +159,18 @@
           <input type="text" placeholder="Nama trainer / fasilitator" id="trainer" data-field="Trainer">
         </div>
         <div class="field">
-          <label>Estimasi Jumlah Partisipan</label>
-          <input type="number" min="0" placeholder="0" id="plannedParticipants" data-field="Jumlah partisipan (rencana)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <label style="margin-bottom:0;">Jumlah Partisipan</label>
+            <span style="font-size:11px;color:var(--moss);font-weight:600;">&#10003; Sinkron tabel</span>
+          </div>
+          <input type="number" min="0" placeholder="0" id="plannedParticipants" data-field="Jumlah partisipan (rencana)" readonly style="background:#FBFBF9;font-weight:600;color:var(--ink);">
         </div>
         <div class="field">
-          <label>Total Durasi Belajar</label>
-          <input type="text" placeholder="cth. 6 jam / 2 sesi" id="totalDuration" data-field="Total durasi belajar">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <label style="margin-bottom:0;">Total Durasi Belajar</label>
+            <span style="font-size:11px;color:var(--moss);font-weight:600;">&#10003; Otomatis dihitung</span>
+          </div>
+          <input type="text" id="totalDuration" data-field="Total durasi belajar" readonly style="background:#FBFBF9;font-weight:600;color:var(--ink);">
         </div>
       </div>
     </section>
