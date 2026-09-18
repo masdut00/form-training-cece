@@ -79,8 +79,16 @@ Setiap pengajuan formulir akan langsung tercatat rapi pada sheet **"Training Sub
 
 ---
 
-## 🔐 3. Akses Master Data & Riwayat
-Untuk melihat riwayat pengajuan langsung dari web:
-- Klik tab **Master Data & Riwayat** di menu atas.
-- Masukkan PIN admin: `ubahpin123` (dapat diubah di `js/app.js`).
-- Tersedia tombol **Export CSV** untuk mengunduh seluruh data pengajuan dalam format spreadsheet.
+## 🔐 3. Akses Master Data & Riwayat (Manual Link & Terproteksi Password)
+
+Halaman formulir sengaja dibuat bersih (*clean*) tanpa tombol navigasi master data publik. Untuk mengakses halaman Master Data & Riwayat:
+1. Ketikkan hash `#master` atau `#admin` di akhir URL browser Anda:
+   - Contoh Lokal: `http://localhost:3000/#master` atau `file:///.../index.html#master`
+   - Contoh Vercel: `https://nama-proyek.vercel.app/#master` (atau `/#admin`)
+2. Sistem akan otomatis menampilkan pop-up keamanan PIN Admin.
+3. Masukkan PIN admin: `ubahpin123` (default, dapat diubah di konstanta `DEFAULT_ADMIN_PIN` pada [`js/app.js`](./js/app.js)).
+4. Setelah masuk:
+   - Anda dapat melihat seluruh riwayat submission yang tersimpan.
+   - Tersedia tombol **Export CSV** untuk mendownload data.
+   - Tersedia tombol **Kunci** untuk mengunci kembali sesi admin.
+   - Tersedia tombol **Kembali ke Form** untuk kembali ke formulir utama yang bersih.

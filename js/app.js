@@ -38,13 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
     tglPelaksanaan.value = today;
   }
 
-  // 3. Seed initial dynamic rows
-  addParticipant('Budi Santoso', 'Technology & IT');
-  addParticipant('Siti Rahma', 'Technology & IT');
-  addModule('Dasar Arsitektur & Best Practices', '60 menit', 'Fasilitator Internal', 'Lecture', 'Pengenalan konsep dan standar kerja');
-  addModule('Hands-on Workshop & Studi Kasus', '120 menit', 'Fasilitator Internal', 'Praktik', 'Simulasi langsung penerapan di modul proyek');
+  // 3. Seed clean initial rows
+  addModule('', '60 menit', '', '', '');
   addApproval('Direct Supervisor / Line Manager');
   addApproval('HR / People & Culture');
+  updateParticipantCount();
 
   // 4. Initial calculations & stepper UI
   calculateScheduleAndDuration();
@@ -586,8 +584,8 @@ function setStatus(cls, label) {
 // Navigation & Admin Gate
 // ==========================================
 function handleHashNavigation() {
-  const hash = window.location.hash;
-  if (hash === '#admin' || hash === '#master') {
+  const hash = (window.location.hash || '').toLowerCase();
+  if (hash === '#admin' || hash === '#master' || hash === '#data') {
     requestAdminAccess();
   } else {
     switchView('form');
@@ -611,41 +609,51 @@ function requestAdminAccess() {
 function checkAdminPin() {
   const pinInput = document.getElementById('adminPinInput');
   const storedPin = localStorage.getItem(ADMIN_PIN_KEY) || DEFAULT_ADMIN_PIN;
-  if (pinInput.value === storedPin) {
+  if (pinInput && pinInput.value === storedPin) {
     sessionStorage.setItem('admin_unlocked', 'true');
     closeModal('modalAdminPin');
-    showToast('Akses Admin berhasil dibuka.', 'success');
+    showToast('Akses Master Data berhasil dibuka.', 'success');
     switchView('master');
-  } else {
+  } else if (pinInput) {
     pinInput.classList.add('error');
     showToast('PIN Admin salah. Silakan coba lagi.', 'error');
     setTimeout(() => pinInput.classList.remove('error'), 1200);
   }
 }
 
+function cancelAdminPin() {
+  closeModal('modalAdminPin');
+  if (window.location.hash === '#admin' || window.location.hash === '#master' || window.location.hash === '#data') {
+    history.replaceState(null, null, window.location.pathname + window.location.search);
+  }
+  switchView('form');
+}
+
+function lockAdminAccess() {
+  sessionStorage.removeItem('admin_unlocked');
+  switchView('form');
+  showToast('Sesi Master Data telah dikunci.', 'info');
+}
+
 function switchView(view) {
   const formView = document.getElementById('formView');
   const masterView = document.getElementById('masterView');
-  const tabForm = document.getElementById('tabForm');
-  const tabMaster = document.getElementById('tabMaster');
   const stickyBar = document.getElementById('stickyBottomBar');
 
   if (view === 'form') {
-    formView.style.display = '';
-    masterView.style.display = 'none';
-    tabForm.classList.add('active');
-    tabMaster.classList.remove('active');
+    if (formView) formView.style.display = '';
+    if (masterView) masterView.style.display = 'none';
     if (stickyBar) stickyBar.style.display = '';
-    if (window.location.hash === '#admin' || window.location.hash === '#master') {
-      history.replaceState(null, null, ' ');
+    if (window.location.hash === '#admin' || window.location.hash === '#master' || window.location.hash === '#data') {
+      history.replaceState(null, null, window.location.pathname + window.location.search);
     }
   } else {
-    formView.style.display = 'none';
-    masterView.style.display = '';
-    tabForm.classList.remove('active');
-    tabMaster.classList.add('active');
+    if (formView) formView.style.display = 'none';
+    if (masterView) masterView.style.display = '';
     if (stickyBar) stickyBar.style.display = 'none';
-    window.location.hash = '#master';
+    if (window.location.hash !== '#master') {
+      window.location.hash = '#master';
+    }
     loadMasterData();
   }
 }
@@ -830,6 +838,133 @@ async function confirmAndExecuteSubmit() {
   populateSuccessModal(data, sheetSaved, scriptUrl);
   openModal('modalSuccessSubmit');
   showToast('Pengajuan training berhasil disimpan!', 'success');
+
+  // Reset form langsung agar bersih kembali untuk pengajuan berikutnya
+  resetForm();
+}
+
+// ==========================================
+// Form Reset Helper
+// ==========================================
+function resetForm() {
+  const formView = document.getElementById('formView');
+  if (formView) {
+    // 1. Clear text, number, url, and textarea inputs (preserve auto-calculated IDs)
+    formView.querySelectorAll('input[type="text"], input[type="number"], input[type="url"], textarea').forEach(input => {
+      if (input.id !== 'trainingId' && input.id !== 'totalDuration' && input.id !== 'plannedParticipants') {
+        input.value = '';
+      }
+      input.classList.remove('error');
+    });
+
+    // 2. Reset selects to first option
+    formView.querySelectorAll('select').forEach(sel => {
+      sel.selectedIndex = 0;
+      sel.classList.remove('error');
+    });
+  }
+
+  // 3. Reset custom dept input
+  const customDept = document.getElementById('customDeptInput');
+  if (customDept) {
+    customDept.style.display = 'none';
+    customDept.value = '';
+  }
+
+  // 4. Reset dates & times to default
+  const today = new Date().toISOString().split('T')[0];
+  const tglPengajuan = document.getElementById('tglPengajuan');
+  if (tglPengajuan) tglPengajuan.value = today;
+  const tglPelaksanaan = document.getElementById('tglPelaksanaan');
+  if (tglPelaksanaan) tglPelaksanaan.value = today;
+  const jamMulai = document.getElementById('jamMulai');
+  if (jamMulai) jamMulai.value = '09:00';
+  const jamSelesai = document.getElementById('jamSelesai');
+  if (jamSelesai) jamSelesai.value = '15:00';
+
+  // 5. Reset Level Chips (Beginner)
+  const levelChips = document.querySelectorAll('#levelChipGrid .chip-card');
+  levelChips.forEach((c, idx) => {
+    if (idx === 0) c.classList.add('selected');
+    else c.classList.remove('selected');
+  });
+  const levelKemahiran = document.getElementById('levelKemahiran');
+  if (levelKemahiran) levelKemahiran.value = 'Beginner';
+
+  // 6. Reset Method Chips (Onsite)
+  const methodChips = document.querySelectorAll('#methodChipGrid .chip-card');
+  methodChips.forEach((c, idx) => {
+    if (idx === 0) c.classList.add('selected');
+    else c.classList.remove('selected');
+  });
+  const metode = document.getElementById('metode');
+  if (metode) metode.value = 'Onsite';
+  const onlineRow = document.getElementById('onlineDetailsRow');
+  if (onlineRow) onlineRow.style.display = 'none';
+
+  // 7. Reset standard dropdown defaults
+  const category = document.getElementById('category');
+  if (category) category.value = 'Soft skill';
+  const evalMethod = document.getElementById('evalMethod');
+  if (evalMethod) evalMethod.value = 'Post-test';
+  const followupInterval = document.getElementById('followupInterval');
+  if (followupInterval) followupInterval.value = '30 hari';
+  const onlinePlatform = document.getElementById('onlinePlatform');
+  if (onlinePlatform) onlinePlatform.value = 'Google Meet';
+
+  // 8. Reset Variance text
+  const varEl = document.getElementById('varianceText');
+  if (varEl) {
+    varEl.textContent = 'Selisih akan muncul di sini';
+    varEl.style.color = 'var(--ink-faint)';
+  }
+
+  // 9. Reset Status Pill
+  const pill = document.getElementById('statusPill');
+  const text = document.getElementById('statusText');
+  if (pill) pill.className = 'status-pill draft';
+  if (text) text.textContent = 'Pending approval';
+
+  // 10. Reset Tables to clean initial state
+  const pBody = document.getElementById('participantBody');
+  if (pBody) {
+    pBody.innerHTML = '';
+    participantCounter = 0;
+    updateParticipantCount();
+  }
+
+  const mBody = document.getElementById('moduleBody');
+  if (mBody) {
+    mBody.innerHTML = '';
+    moduleCounter = 0;
+    addModule('', '60 menit', '', '', '');
+  }
+
+  const appWrap = document.getElementById('approvalSteps');
+  if (appWrap) {
+    appWrap.innerHTML = '';
+    approvalCounter = 0;
+    addApproval('Direct Supervisor / Line Manager');
+    addApproval('HR / People & Culture');
+  }
+
+  // 11. Generate fresh new ID & recalculate schedule & duration
+  generateNewTrainingId();
+  calculateScheduleAndDuration();
+
+  // 12. Reset Stepper to Step 1
+  currentStep = 1;
+  updateStepperUI();
+  pendingSubmitData = null;
+
+  // 13. Remove any remaining error classes
+  document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+
+  // 14. Scroll to top
+  const fv = document.getElementById('formView');
+  if (fv) {
+    fv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 function saveToLocalStorage(entry) {
@@ -1042,15 +1177,24 @@ function closeModal(id) {
 
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-overlay')) {
+    const isPinModal = e.target.id === 'modalAdminPin';
     e.target.classList.remove('active');
     document.body.style.overflow = '';
+    if (isPinModal) {
+      cancelAdminPin();
+    }
   }
 });
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    const adminModal = document.getElementById('modalAdminPin');
+    const wasPinActive = adminModal && adminModal.classList.contains('active');
     document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
     document.body.style.overflow = '';
+    if (wasPinActive) {
+      cancelAdminPin();
+    }
   }
 });
 

@@ -14,20 +14,6 @@
 
 <div class="page">
 
-  <!-- Top Application Navigation -->
-  <header class="app-nav">
-    <div class="view-tabs">
-      <button type="button" id="tabForm" class="active" onclick="switchView('form')">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-        Formulir Pengajuan
-      </button>
-      <button type="button" id="tabMaster" onclick="requestAdminAccess()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-        Master Data &amp; Riwayat
-      </button>
-    </div>
-  </header>
-
   <!-- ================= FORM VIEW ================= -->
   <main id="formView">
 
@@ -580,7 +566,7 @@
         <h2 class="voice">Master Data Submission</h2>
         <span class="helper-note" style="margin:0;">Riwayat pengajuan training internal yang tersimpan.</span>
       </div>
-      <div style="display:flex;gap:10px;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
         <button type="button" class="btn-secondary" onclick="exportToCsv()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Export CSV
@@ -588,6 +574,14 @@
         <button type="button" class="btn-secondary" onclick="loadMasterData()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
           Refresh
+        </button>
+        <button type="button" class="btn-secondary" onclick="lockAdminAccess()" title="Kunci sesi admin dan kembali ke formulir">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Kunci
+        </button>
+        <button type="button" class="btn-primary" onclick="switchView('form')" style="gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Kembali ke Form
         </button>
       </div>
     </div>
@@ -695,7 +689,7 @@
       <div class="summary-box" id="successSummaryBox"></div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn-secondary" onclick="closeModal('modalSuccessSubmit'); switchView('master');">Lihat di Master Data</button>
+      <button type="button" class="btn-secondary" onclick="closeModal('modalSuccessSubmit'); window.scrollTo({ top: 0, behavior: 'smooth' });">Selesai</button>
       <a class="btn-primary" id="modalSuccessEmailLink" href="#" target="_blank" onclick="closeModal('modalSuccessSubmit')">
         Kirim Notifikasi Email
       </a>
@@ -708,7 +702,7 @@
   <div class="modal-card" style="max-width:400px;">
     <div class="modal-header">
       <h3 class="voice">Akses Master Data</h3>
-      <button type="button" class="modal-close" onclick="closeModal('modalAdminPin')">&times;</button>
+      <button type="button" class="modal-close" onclick="cancelAdminPin()">&times;</button>
     </div>
     <div class="modal-body">
       <div class="modal-icon-badge info">
@@ -720,7 +714,7 @@
       </form>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn-secondary" onclick="closeModal('modalAdminPin')">Batal</button>
+      <button type="button" class="btn-secondary" onclick="cancelAdminPin()">Batal</button>
       <button type="button" class="btn-primary" onclick="checkAdminPin()">Buka Data</button>
     </div>
   </div>
